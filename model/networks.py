@@ -390,15 +390,14 @@ class LocalDis(nn.Module):
         self.cnum = config['ndf']
         self.use_cuda = use_cuda
         self.device_ids = device_ids
-
+        print(self.input_dim, self.cnum)
         self.dis_conv_module = DisConvModule(self.input_dim, self.cnum)
-        self.linear = nn.Linear(self.cnum*4*8*8, 1)
+        self.linear = nn.Linear(self.cnum*4*4, 1)
 
     def forward(self, x):
         x = self.dis_conv_module(x)
         x = x.view(x.size()[0], -1)
         x = self.linear(x)
-
         return x
 
 
@@ -411,7 +410,7 @@ class GlobalDis(nn.Module):
         self.device_ids = device_ids
 
         self.dis_conv_module = DisConvModule(self.input_dim, self.cnum)
-        self.linear = nn.Linear(self.cnum*4*16*16, 1)
+        self.linear = nn.Linear(self.cnum*4*25, 1)
 
     def forward(self, x):
         x = self.dis_conv_module(x)

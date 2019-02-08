@@ -1,6 +1,10 @@
+import h5py
 import sys
 import torch.utils.data as data
+import numpy as np
+from PIL import Image
 from os import listdir
+from glob import glob
 from utils.tools import default_loader, is_image_file, normalize
 import os
 
@@ -8,20 +12,22 @@ import torchvision.transforms as transforms
 
 
 class Dataset(data.Dataset):
-    def __init__(self, data_path, image_shape, with_subfolder=False, random_crop=True, return_name=False):
+    def __init__(self, data_path, image_shape, random_crop=True, return_name=False):
         super(Dataset, self).__init__()
-        if with_subfolder:
-            self.samples = self._find_samples_in_subfolders(data_path)
-        else:
-            self.samples = [x for x in listdir(data_path) if is_image_file(x)]
+        self.samples = self.find_mouse_images(data_path)
         self.data_path = data_path
         self.image_shape = image_shape[:-1]
         self.random_crop = random_crop
         self.return_name = return_name
 
     def __getitem__(self, index):
-        path = os.path.join(self.data_path, self.samples[index])
-        img = default_loader(path)
+        file_idx = np.where(self.samples > index)[0][0]
+        if file_idx > 0:
+            index -= self.samples[file_idx - 1]
+        with h5py.File(self.mouse_files[file_idx], 'r') as f:
+            img = np.uint8(f['frames'][index] / 100 * 255)
+            img = img[:, :, None]
+            img = Image.fromarray(np.tile(img, (1, 1, 3)))
 
         if self.random_crop:
             imgw, imgh = img.size
@@ -36,9 +42,18 @@ class Dataset(data.Dataset):
         img = normalize(img)
 
         if self.return_name:
-            return self.samples[index], img
+            return self.mouse_files[file_idx], img
         else:
             return img
+
+    def find_mouse_images(self, dir):
+        mouse_files = glob(os.path.join(dir, '*.h5'))
+        self.mouse_files = mouse_files
+        samples = []
+        for m in mouse_files:
+            with h5py.File(m, 'r') as f:
+                samples += [f['frames'].shape[0]]
+        return np.cumsum(samples)
 
     def _find_samples_in_subfolders(self, dir):
         """
@@ -72,4 +87,4 @@ class Dataset(data.Dataset):
         return samples
 
     def __len__(self):
-        return len(self.samples)
+        return self.samples[-1]

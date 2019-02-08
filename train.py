@@ -61,7 +61,6 @@ def main():
         # Load the dataset
         logger.info(f"Training on dataset: {config['dataset_name']}")
         train_dataset = Dataset(data_path=config['train_data_path'],
-                                with_subfolder=config['data_with_subfolder'],
                                 image_shape=config['image_shape'],
                                 random_crop=config['random_crop'])
         # val_dataset = Dataset(data_path=config['val_data_path'],
